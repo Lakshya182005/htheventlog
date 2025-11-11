@@ -62,12 +62,4 @@ export const mockTeams: Team[] = [
   },
 ];
 
-export const mockQRCodes: QRCode[] = [
-  { id: 1, code: "QR001-LEVEL1", level: 1, cohortId: 1, cohort: mockCohorts[0] },
-  { id: 2, code: "QR002-LEVEL2", level: 2, cohortId: 1, cohort: mockCohorts[0] },
-  { id: 3, code: "QR003-LEVEL3", level: 3, cohortId: 1, cohort: mockCohorts[0] },
-  { id: 4, code: "QR004-LEVEL4", level: 4, cohortId: 1, cohort: mockCohorts[0] },
-  { id: 5, code: "QR005-LEVEL5", level: 5, cohortId: 1, cohort: mockCohorts[0] },
-];
-
 export const TOTAL_LEVELS = 10;
