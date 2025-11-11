@@ -43,7 +43,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-foreground glitch-hover">
-                  CYBER QUEST
+                  Hack The Hunt
                 </h1>
                 <p className="text-sm text-muted-foreground terminal-text">
                   Team Challenge Tracker
@@ -118,7 +118,7 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="grid gap-4">
+            <div className="grid gap-4 ml-6">
               {sortedTeams.map((team, index) => (
                 <TeamCard key={team.id} team={team} rank={index + 1} />
               ))}
@@ -126,13 +126,13 @@ const Index = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          {/*<div className="space-y-6">*/}
             {/* QR Scanner */}
-            <QRScanner />
+            {/*<QRScanner />*/}
 
             {/*/!* Leaderboard *!/*/}
             {/*<Leaderboard teams={filteredTeams} />*/}
-          </div>
+          {/*</div>*/}
         </div>
       </main>
 
