@@ -1,7 +1,9 @@
-import axios from 'axios'
-import { prisma } from './db'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-const API_BASE_URL = 'http://localhost:4001'
+import axios from 'axios'
+
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL
 
 export interface ScanResponse {
   message: string
@@ -43,18 +45,18 @@ export interface ApiError {
   details?: string
 }
 
-export const scanQR = async (
-  cohort: number,
-  level: number,
-  teamId: string
-): Promise<ScanResponse> => {
+// =============================
+// 🔥 NEW TOKEN-BASED QR SCAN
+// =============================
+export const scanQR = async (token: string, teamId: string): Promise<ScanResponse> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/scan/${cohort}/${level}`, {
-      teamId: teamId.trim()
+    const response = await axios.post(`${API_BASE_URL}/scan`, {
+      token,
+      teamId: teamId.trim(),
     })
 
     return response.data
-  } catch (error: unknown) {
+  } catch (error: any) {
     if (axios.isAxiosError(error) && error.response?.data) {
       throw error.response.data
     }
@@ -65,11 +67,14 @@ export const scanQR = async (
   }
 }
 
+// =============================
+// Get Team Data
+// =============================
 export const getTeamData = async (teamId: string): Promise<TeamData> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/team/${teamId}`)
     return response.data
-  } catch (error: unknown) {
+  } catch (error: any) {
     if (axios.isAxiosError(error) && error.response?.data) {
       throw error.response.data
     }
@@ -80,11 +85,14 @@ export const getTeamData = async (teamId: string): Promise<TeamData> => {
   }
 }
 
+// =============================
+// Get Cohort Teams
+// =============================
 export const getCohortTeams = async (cohortId: number): Promise<CohortTeamsData> => {
   try {
     const response = await axios.get(`${API_BASE_URL}/cohort/${cohortId}/teams`)
     return response.data
-  } catch (error: unknown) {
+  } catch (error: any) {
     if (axios.isAxiosError(error) && error.response?.data) {
       throw error.response.data
     }
@@ -95,42 +103,20 @@ export const getCohortTeams = async (cohortId: number): Promise<CohortTeamsData>
   }
 }
 
+// =============================
+// Get Cohort Leaderboard (OLD PRISMA LOGIC REMOVED)
+// =============================
 export const getCohortLeaderboard = async (cohortId: number): Promise<CohortTeamsData> => {
   try {
-    const cohort = await prisma.cohort.findUnique({
-      where: { id: cohortId },
-      include: {
-        teams: {
-          select: {
-            id: true,
-            name: true,
-            currentLevel: true,
-          },
-          orderBy: {
-            currentLevel: 'desc',
-          },
-        },
-      },
-    })
-
-    if (!cohort) {
-      throw { error: 'Cohort not found' }
-    }
-
-    return {
-      cohort: {
-        id: cohort.id,
-        name: cohort.name,
-      },
-      teams: cohort.teams,
-    }
-  } catch (error: unknown) {
+    const response = await axios.get(`${API_BASE_URL}/cohort/${cohortId}/leaderboard`)
+    return response.data
+  } catch (error: any) {
     if (axios.isAxiosError(error) && error.response?.data) {
       throw error.response.data
     }
     throw {
-      error: 'Database Error',
-      details: 'Unable to fetch leaderboard data'
+      error: 'Network Error',
+      details: 'Unable to connect to the server'
     }
   }
 }

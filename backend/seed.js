@@ -1,120 +1,146 @@
+// backend/seed.js
+import dotenv from "dotenv";
+dotenv.config();
+
+import mongoose from "mongoose";
 import fs from "fs";
 import path from "path";
 import Papa from "papaparse";
-import { fileURLToPath } from "url";
-
-import { connectDB } from "./db.js";
-import { Team } from "./models/Team.js";
+import crypto from "crypto";
 import { Cohort } from "./models/Cohort.js";
+import { Team } from "./models/Team.js";
 import { QRCode } from "./models/QRCode.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { connectDB } from "./db.js";
 
 async function main() {
-  console.log("🚀 Starting MongoDB Seeder...\n");
+  console.log("🚀 Starting secure MongoDB seeder...\n");
+
   await connectDB();
+  console.log("🟢 Connected to MongoDB\n");
 
-  /* ================================================
-     1️⃣ LOAD & SEED TEAMS + COHORTS
-     ================================================ */
+  // ======================================
+  // 1️⃣ LOAD TEAM CSV
+  // ======================================
+  const teamCsvPath = path.join(process.cwd(), "teams.csv");
+  const teamCsv = fs.readFileSync(teamCsvPath, "utf8");
 
-  const teamCsv = fs.readFileSync(path.join(__dirname, "teams.csv"), "utf8");
-  const teamRows = Papa.parse(teamCsv, {
+  const teamParsed = Papa.parse(teamCsv, {
     header: true,
     skipEmptyLines: true,
-  }).data;
+    transformHeader: (h) => h.trim(),
+  });
 
-  console.log(`📌 Found ${teamRows.length} teams in CSV`);
+  const teamRows = teamParsed.data;
 
-  // Map numeric cohort -> MongoDB ObjectId
-  const cohortMap = {};
+  console.log(`📌 Found ${teamRows.length} teams\n`);
 
   for (const row of teamRows) {
-    const teamUID = row["Team UID"]?.trim();
-    const teamName = row["Team Name"]?.trim();
+  // 💡 Handle CSV header inconsistencies
+  const teamUID =
+    (row["Team UID"] || row["UID"] || row["id"] || "").trim();
 
-    // Handle Cohort OR Cohort(space)
-    const cohortNum = (row["Cohort"] || row["Cohort "] || "").trim();
+  const cohortNum =
+    (row["Cohort"] || row["Cohort "] || row["cohort"] || "").trim();
 
-    const level = parseInt(row["Level"]) || 0;
+  const teamName =
+    (row["Team Name"] || row["Name"] || "").trim();
 
-    if (!teamUID || !cohortNum) {
-      console.log("⚠️ Skipping invalid team row:", row);
-      continue;
-    }
+  const level = parseInt(row["Level"] || row["level"] || "0");
 
-    const cohortName = `Cohort ${cohortNum}`;
-
-    // Create/find cohort
-    let cohort = await Cohort.findOne({ name: cohortName });
-    if (!cohort) {
-      cohort = await Cohort.create({ name: cohortName });
-      console.log(`🆕 Created cohort ${cohortName}`);
-    }
-
-    cohortMap[cohortNum] = cohort._id;
-
-    // Avoid duplicates
-    const exists = await Team.findOne({ id: teamUID });
-    if (exists) continue;
-
-    await Team.create({
-      id: teamUID,
-      name: teamName || "",
-      currentLevel: level,
-      cohortId: cohort._id,
-    });
-
-    console.log(`✅ Added team: ${teamUID} (${teamName}) → ${cohortName}`);
+  if (!teamUID || !cohortNum || !teamName) {
+    console.log("⚠️ Skipping invalid row:", row);
+    continue;
   }
 
-  /* ================================================
-     2️⃣ SEED QR CODES
-     ================================================ */
+  const cohortName = `Cohort ${cohortNum}`;
 
-  console.log("\n🚀 Seeding QR Codes...");
-
-  const qrCsv = fs.readFileSync(path.join(__dirname, "QRCode_Seed.csv"), "utf8");
-  const qrRows = Papa.parse(qrCsv, {
-    header: true,
-    skipEmptyLines: true,
-  }).data;
-
-  console.log(`📌 Found ${qrRows.length} QR rows`);
-
-  for (const row of qrRows) {
-    const cohortIdNum = (row["cohortId"] || row["cohortId "] || "").trim();
-    const level = parseInt(row["level"]);
-    const flag = row["flag"]?.trim();
-    const limit = parseInt(row["limit"]);
-
-    const cohortObjectId = cohortMap[cohortIdNum];
-
-    if (!cohortObjectId) {
-      console.log(`❌ No cohort found for numeric ID: ${cohortIdNum}`);
-      continue;
-    }
-
-    const exists = await QRCode.findOne({ flag });
-    if (exists) continue;
-
-    await QRCode.create({
-      flag,
-      level,
-      limit,
-      currentTeams: 0,
-      cohortId: cohortObjectId,
-    });
-
-    console.log(`🎯 Added QR: ${flag} (Level ${level}, Cohort ${cohortIdNum})`);
+  let cohort = await Cohort.findOne({ name: cohortName });
+  if (!cohort) {
+    cohort = await Cohort.create({ name: cohortName });
   }
 
-  console.log("\n🎉 SEEDING COMPLETE!\n");
-  process.exit(0);
+  const existingTeam = await Team.findOne({ id: teamUID });
+  if (existingTeam) {
+    console.log(`⚠️ Team ${teamUID} exists — skipping`);
+    continue;
+  }
+
+  await Team.create({
+    id: teamUID,
+    name: teamName,
+    currentLevel: level,
+    cohortId: cohort._id,
+  });
+
+  console.log(`✅ Created team ${teamUID} (${cohortName})`);
 }
 
-main().catch((err) => {
-  console.error("❌ Seed failed:", err);
-  process.exit(1);
-});
+
+  // ======================================
+  // 2️⃣ LOAD QR CODE CSV
+  // ======================================
+  console.log("\n🚀 Seeding QR Codes...\n");
+
+  const qrCsvPath = path.join(process.cwd(), "QRCode_Seed.csv");
+  const qrCsv = fs.readFileSync(qrCsvPath, "utf8");
+
+  const qrParsed = Papa.parse(qrCsv, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim(),
+  });
+
+  const qrRows = qrParsed.data;
+
+  let successQR = 0,
+      skipQR = 0,
+      errorQR = 0;
+
+  for (const row of qrRows) {
+    try {
+      const cohortNum = parseInt(row["cohortId"]);
+      const level = parseInt(row["level"]);
+      const flag = row["flag"]?.trim();
+      const limit = parseInt(row["limit"]);
+
+      if (!cohortNum || !level || !flag || isNaN(limit)) {
+        console.log(`⚠ Skipping invalid QR row: ${JSON.stringify(row)}`);
+        skipQR++;
+        continue;
+      }
+
+      const cohort = await Cohort.findOne({ name: `Cohort ${cohortNum}` });
+      if (!cohort) {
+        console.log(`❌ No cohort found for numeric ID: ${cohortNum}`);
+        continue;
+      }
+
+      // Generate a secure token
+      const token = crypto.randomBytes(24).toString("hex");
+
+      await QRCode.create({
+        flag,
+        level,
+        limit,
+        currentTeams: 0,
+        cohortId: cohort._id,
+        token,
+      });
+
+      console.log(`✅ Level ${level} | Cohort ${cohortNum} | Token assigned`);
+      successQR++;
+    } catch (err) {
+      console.error(`✗ Error creating QR Code: ${err.message}`);
+      errorQR++;
+    }
+  }
+
+  console.log("\n🎉 SEEDING COMPLETE!");
+  console.log(`QR Created: ${successQR}`);
+  console.log(`QR Skipped: ${skipQR}`);
+  console.log(`QR Errors:  ${errorQR}`);
+
+  process.exit();
+}
+
+main();

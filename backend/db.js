@@ -1,13 +1,20 @@
+// db.js
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
 
-const MONGO_URL ="mongodb+srv://Lakshya:Lakshya18@cluster0.wck5vzk.mongodb.net/htthunt?retryWrites=true&w=majority";
-// paste the real URL from MongoDB Atlas
+const MONGO_URL = process.env.MONGO_URL;
 
-export async function connectDB() {
+export const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_URL);
+    await mongoose.connect(MONGO_URL, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log("📌 Using database:", mongoose.connection.name);
+
     console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ MongoDB connection error", err);
+    process.exit(1);
   }
-}
+};

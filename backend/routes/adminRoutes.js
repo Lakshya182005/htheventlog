@@ -21,7 +21,7 @@ router.get("/cohorts", async (req, res) => {
               .lean();
 
             const qrcodes = await QRCode.find({ cohortId: c._id })
-              .select("level flag limit currentTeams")
+              .select("level flag limit currentTeams token")
               .lean();
 
             return {
