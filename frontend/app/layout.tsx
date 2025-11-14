@@ -11,11 +11,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Predefined deterministic pattern (no Math.random)
+  // Deterministic rain animation (NO Math.random)
   const columns = Array.from({ length: 20 }).map((_, i) => {
     return {
-      left: `${(i * 5) % 100}%`, // evenly spaced (still looks random with animation)
-      delay: `${(i % 5) * 0.5}s`,
+      left: `${(i * 5) % 100}%`, // evenly spaced so it "feels" random
+      delay: `${(i % 5) * 0.4}s`,
       duration: `${2 + (i % 3)}s`,
       characters: Array.from({ length: 30 }).map(
         (_, j) => String.fromCharCode(65 + ((i + j) % 26))
@@ -30,7 +30,7 @@ export default function RootLayout({
         <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,255,0,0.1)_0%,_transparent_50%)] opacity-20"></div>
         <div className="fixed inset-0 bg-[linear-gradient(90deg,_transparent_0%,_rgba(0,255,0,0.03)_50%,_transparent_100%)] animate-pulse"></div>
 
-        {/* Matrix-like rain (deterministic, safe) */}
+        {/* Deterministic Matrix-like animation */}
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black"></div>
 
